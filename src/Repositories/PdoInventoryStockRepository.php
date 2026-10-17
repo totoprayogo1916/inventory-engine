@@ -11,52 +11,44 @@ class PdoInventoryStockRepository implements InventoryStockRepositoryInterface
 {
     public function __construct(private readonly PDO $pdo) {}
 
-    public function save(InventoryStock $stock): void                                                                                        
-    {                                                                                                                                        
-        $existing = $this->findById($stock->id);                                                                                             
-                                                                                                                                             
-        if ($existing instanceof \Ttpryg\InventoryEngine\Entities\InventoryStock) {                                                          
-            $sql = 'UPDATE inventory_stocks SET location_type = :location_type, location_id = :location_id, product_id = :product_id,        
-variant_id = :variant_id, sku = :sku, quantity_on_hand = :quantity_on_hand, quantity_reserved = :quantity_reserved, min_stock_alert =          
-:min_stock_alert, updated_at = :updated_at WHERE id = :id';                                                                                    
-            $params = [                                                                                                                      
-                'id' => $stock->id,                                                                                                          
-                'location_type' => $stock->locationType,                                                                                     
-                'location_id' => $stock->locationId,                                                                                         
-                'product_id' => $stock->productId,                                                                                           
-                'variant_id' => $stock->variantId,                                                                                           
-                'sku' => $stock->sku,                                                                                                        
-                'quantity_on_hand' => $stock->quantityOnHand,                                                                                
-                'quantity_reserved' => $stock->quantityReserved,                                                                             
-                'min_stock_alert' => $stock->minStockAlert,                                                                                  
-                'updated_at' => $stock->updatedAt->format('Y-m-d H:i:s'),                                                                    
-            ];                                                                                                                               
-        } else {                                                                                                                             
-            $sql = 'INSERT INTO inventory_stocks (id, location_type, location_id, product_id, variant_id, sku, quantity_on_hand,             
-quantity_reserved, min_stock_alert, created_at, updated_at) VALUES (:id, :location_type, :location_id, :product_id, :variant_id, :sku,         
-:quantity_on_hand, :quantity_reserved, :min_stock_alert, :created_at, :updated_at)';                                                           
-            $params = [                                                                                                                      
-                'id' => $stock->id,                                                                                                          
-                'location_type' => $stock->locationType,                                                                                     
-                'location_id' => $stock->locationId,                                                                                         
-                'product_id' => $stock->productId,                                                                                           
-                'variant_id' => $stock->variantId,                                                                                           
-                'sku' => $stock->sku,                                                                                                        
-                'quantity_on_hand' => $stock->quantityOnHand,                                                                                
-                'quantity_reserved' => $stock->quantityReserved,                                                                             
-                'min_stock_alert' => $stock->minStockAlert,                                                                                  
-                'created_at' => $stock->createdAt->format('Y-m-d H:i:s'),                                                                    
-                'updated_at' => $stock->updatedAt->format('Y-m-d H:i:s'),                                                                    
-            ];                                                                                                                               
-        }                                                                                                                                    
-                                                                                                                                             
-        $stmt = $this->pdo->prepare($sql);                                                                                                   
-        $stmt->execute($params);                                                                                                             
-    } 
+    public function save(InventoryStock $stock): void
+    {
+        $params = [
+            'id' => $stock->id,
+            'location_type' => $stock->locationType,
+            'location_id' => $stock->locationId,
+            'product_id' => $stock->productId,
+            'variant_id' => $stock->variantId,
+            'sku' => $stock->sku,
+            'quantity_on_hand' => $stock->quantityOnHand,
+            'quantity_reserved' => $stock->quantityReserved,
+            'min_stock_alert' => $stock->minStockAlert,
+            'created_at' => $stock->createdAt->format('Y-m-d H:i:s'),
+            'updated_at' => $stock->updatedAt->format('Y-m-d H:i:s'),
+        ];
+
+        if ($this->driverName() === 'sqlite') {
+            $sql = 'INSERT INTO inventory_stocks (id, location_type, location_id, product_id, variant_id, sku, quantity_on_hand, quantity_reserved, min_stock_alert, created_at, updated_at) VALUES (:id, :location_type, :location_id, :product_id, :variant_id, :sku, :quantity_on_hand, :quantity_reserved, :min_stock_alert, :created_at, :updated_at) ON CONFLICT(id) DO UPDATE SET location_type = excluded.location_type, location_id = excluded.location_id, product_id = excluded.product_id, variant_id = excluded.variant_id, sku = excluded.sku, quantity_on_hand = excluded.quantity_on_hand, quantity_reserved = excluded.quantity_reserved, min_stock_alert = excluded.min_stock_alert, updated_at = excluded.updated_at';
+        } else {
+            $sql = 'INSERT INTO inventory_stocks (id, location_type, location_id, product_id, variant_id, sku, quantity_on_hand, quantity_reserved, min_stock_alert, created_at, updated_at) VALUES (:id, :location_type, :location_id, :product_id, :variant_id, :sku, :quantity_on_hand, :quantity_reserved, :min_stock_alert, :created_at, :updated_at) ON DUPLICATE KEY UPDATE location_type = VALUES(location_type), location_id = VALUES(location_id), product_id = VALUES(product_id), variant_id = VALUES(variant_id), sku = VALUES(sku), quantity_on_hand = VALUES(quantity_on_hand), quantity_reserved = VALUES(quantity_reserved), min_stock_alert = VALUES(min_stock_alert), updated_at = VALUES(updated_at)';
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+    }
 
     public function findById(string $id): ?InventoryStock
     {
         $stmt = $this->pdo->prepare('SELECT * FROM inventory_stocks WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ? $this->mapToEntity($row) : null;
+    }
+
+    public function findByIdForUpdate(string $id): ?InventoryStock
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM inventory_stocks WHERE id = :id'.$this->lockClause());
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -80,6 +72,29 @@ quantity_reserved, min_stock_alert, created_at, updated_at) VALUES (:id, :locati
         }
 
         $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ? $this->mapToEntity($row) : null;
+    }
+
+    public function findByLocationAndProductForUpdate(string $locationType, string $locationId, string $productId, ?string $variantId = null): ?InventoryStock
+    {
+        $sql = 'SELECT * FROM inventory_stocks WHERE location_type = :location_type AND location_id = :location_id AND product_id = :product_id';
+        $params = [
+            'location_type' => $locationType,
+            'location_id' => $locationId,
+            'product_id' => $productId,
+        ];
+
+        if ($variantId !== null) {
+            $sql .= ' AND variant_id = :variant_id';
+            $params['variant_id'] = $variantId;
+        } else {
+            $sql .= ' AND variant_id IS NULL';
+        }
+
+        $stmt = $this->pdo->prepare($sql.$this->lockClause());
         $stmt->execute($params);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -129,6 +144,16 @@ quantity_reserved, min_stock_alert, created_at, updated_at) VALUES (:id, :locati
         }
 
         return $result;
+    }
+
+    private function driverName(): string
+    {
+        return (string) $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    }
+
+    private function lockClause(): string
+    {
+        return in_array($this->driverName(), ['mysql', 'mariadb'], true) ? ' FOR UPDATE' : '';
     }
 
     private function mapToEntity(array $row): InventoryStock

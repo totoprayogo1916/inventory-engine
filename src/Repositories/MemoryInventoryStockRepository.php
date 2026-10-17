@@ -20,6 +20,11 @@ class MemoryInventoryStockRepository implements InventoryStockRepositoryInterfac
         return $this->stocks[$id] ?? null;
     }
 
+    public function findByIdForUpdate(string $id): ?InventoryStock
+    {
+        return $this->findById($id);
+    }
+
     public function findByLocationAndProduct(string $locationType, string $locationId, string $productId, ?string $variantId = null): ?InventoryStock
     {
         foreach ($this->stocks as $stock) {
@@ -31,6 +36,11 @@ class MemoryInventoryStockRepository implements InventoryStockRepositoryInterfac
         }
 
         return null;
+    }
+
+    public function findByLocationAndProductForUpdate(string $locationType, string $locationId, string $productId, ?string $variantId = null): ?InventoryStock
+    {
+        return $this->findByLocationAndProduct($locationType, $locationId, $productId, $variantId);
     }
 
     public function findByProduct(string $productId, ?string $variantId = null): array
