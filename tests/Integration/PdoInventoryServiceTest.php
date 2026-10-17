@@ -3,9 +3,10 @@
 namespace Ttpryg\InventoryEngine\Tests\Integration;
 
 use DateTimeImmutable;
-use RuntimeException;
 use Ttpryg\InventoryEngine\Entities\InventoryStock;
 use Ttpryg\InventoryEngine\Enums\ReservationStatus;
+use Ttpryg\InventoryEngine\Exceptions\InsufficientStockException;
+use Ttpryg\InventoryEngine\Exceptions\ReservationExpiredException;
 use Ttpryg\InventoryEngine\Repositories\PdoInventoryLocationRepository;
 use Ttpryg\InventoryEngine\Repositories\PdoInventoryStockRepository;
 use Ttpryg\InventoryEngine\Repositories\PdoStockMovementRepository;
@@ -97,8 +98,8 @@ class PdoInventoryServiceTest extends PdoTestCase
                 referenceType: 'order',
                 referenceId: 'order-99'
             );
-            $this->fail('Expected RuntimeException for insufficient stock');
-        } catch (RuntimeException $exception) {
+            $this->fail('Expected InsufficientStockException');
+        } catch (InsufficientStockException $exception) {
             $this->assertStringContainsString('Insufficient available stock', $exception->getMessage());
         }
 
@@ -221,8 +222,8 @@ class PdoInventoryServiceTest extends PdoTestCase
 
         try {
             $this->service->commitReservation('res-1');
-            $this->fail('Expected RuntimeException for expired reservation');
-        } catch (RuntimeException $exception) {
+            $this->fail('Expected ReservationExpiredException');
+        } catch (ReservationExpiredException $exception) {
             $this->assertStringContainsString('has expired', $exception->getMessage());
         }
 
