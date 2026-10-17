@@ -20,66 +20,16 @@
 
 ## 🗄️ Database Schema
 
-Run the SQL script from `database/schema.sql`:
+Schema files live in `database/`, one per driver:
 
-```sql
-CREATE TABLE IF NOT EXISTS inventory_locations (
-    id VARCHAR(36) PRIMARY KEY,
-    location_type VARCHAR(50) NOT NULL, -- warehouse, store, consignment, supplier
-    location_id VARCHAR(100) NOT NULL,
-    name VARCHAR(150) NOT NULL,
-    code VARCHAR(50) NOT NULL UNIQUE,
-    address TEXT NULL,
-    is_active TINYINT(1) DEFAULT 1,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL,
-    UNIQUE (location_type, location_id)
-);
+| Driver | Schema file |
+|---|---|
+| SQLite | `database/schema.sqlite.sql` |
+| MySQL 8 / MariaDB | `database/schema.mysql.sql` |
 
-CREATE TABLE IF NOT EXISTS inventory_stocks (
-    id VARCHAR(36) PRIMARY KEY,
-    location_type VARCHAR(50) NOT NULL,
-    location_id VARCHAR(100) NOT NULL,
-    product_id VARCHAR(36) NOT NULL,
-    variant_id VARCHAR(36) NULL,
-    sku VARCHAR(100) NULL,
-    quantity_on_hand INT NOT NULL DEFAULT 0,
-    quantity_reserved INT NOT NULL DEFAULT 0,
-    min_stock_alert INT NOT NULL DEFAULT 5,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL
-);
+Both scripts are idempotent (`CREATE TABLE IF NOT EXISTS`; on MySQL/MariaDB the indexes are defined inline so re-running is safe — MySQL does not support `CREATE INDEX IF NOT EXISTS`).
 
-CREATE INDEX IF NOT EXISTS idx_location_stock ON inventory_stocks (location_type, location_id, product_id, variant_id);
-
-CREATE TABLE IF NOT EXISTS stock_reservations (
-    id VARCHAR(36) PRIMARY KEY,
-    inventory_stock_id VARCHAR(36) NOT NULL,
-    reference_type VARCHAR(50) NOT NULL, -- cart, order
-    reference_id VARCHAR(36) NOT NULL,
-    quantity INT NOT NULL,
-    status VARCHAR(30) NOT NULL DEFAULT 'active', -- active, committed, released, expired
-    expires_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL,
-    FOREIGN KEY (inventory_stock_id) REFERENCES inventory_stocks(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS stock_movements (
-    id VARCHAR(36) PRIMARY KEY,
-    inventory_stock_id VARCHAR(36) NOT NULL,
-    location_type VARCHAR(50) NOT NULL,
-    location_id VARCHAR(100) NOT NULL,
-    type VARCHAR(30) NOT NULL, -- in, out, reserve, commit, release, transfer, adjustment
-    quantity INT NOT NULL,
-    reference_type VARCHAR(50) NULL,
-    reference_id VARCHAR(36) NULL,
-    note TEXT NULL,
-    actor_id VARCHAR(36) NULL,
-    created_at DATETIME NOT NULL,
-    FOREIGN KEY (inventory_stock_id) REFERENCES inventory_stocks(id) ON DELETE CASCADE
-);
-```
+Tables: `inventory_locations`, `inventory_stocks`, `stock_reservations`, `stock_movements` (with indexes for stock lookup, reservation expiry scans, reference lookups, and movement audits).
 
 ---
 
@@ -153,17 +103,25 @@ $service->transferStock(
 
 ## 🧪 Testing
 
-Run PHPUnit test suite:
+Run PHPUnit test suite (SQLite in-memory by default):
 
 ```bash
 vendor/bin/phpunit
 ```
 
-Or using Docker Compose:
+Or using Docker Compose — this runs the same suite against the bundled MariaDB service:
 
 ```bash
 docker compose up -d
 docker compose exec app vendor/bin/phpunit
+```
+
+To run the integration tests against your own MySQL/MariaDB instance, point the `TEST_DB_*` environment variables at it:
+
+```bash
+TEST_DB_DSN='mysql:host=127.0.0.1;dbname=inventory_engine;charset=utf8mb4' \
+TEST_DB_USER=root TEST_DB_PASS=secret \
+vendor/bin/phpunit
 ```
 
 ---

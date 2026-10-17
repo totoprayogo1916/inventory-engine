@@ -1,29 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Ttpryg\InventoryEngine\Tests\Integration;
 
-use PDO;
-use PHPUnit\Framework\TestCase;
 use Ttpryg\InventoryEngine\Entities\InventoryLocation;
 use Ttpryg\InventoryEngine\Entities\InventoryStock;
 use Ttpryg\InventoryEngine\Repositories\PdoInventoryLocationRepository;
 use Ttpryg\InventoryEngine\Repositories\PdoInventoryStockRepository;
 
-class PdoInventoryRepositoryTest extends TestCase
+class PdoInventoryRepositoryTest extends PdoTestCase
 {
-    private PDO $pdo;
-
     private PdoInventoryLocationRepository $locationRepo;
 
     private PdoInventoryStockRepository $stockRepo;
 
     protected function setUp(): void
     {
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        $schema = file_get_contents(__DIR__.'/../../database/schema.sql');
-        $this->pdo->exec($schema);
+        parent::setUp();
 
         $this->locationRepo = new PdoInventoryLocationRepository($this->pdo);
         $this->stockRepo = new PdoInventoryStockRepository($this->pdo);
