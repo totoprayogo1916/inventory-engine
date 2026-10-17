@@ -2,10 +2,10 @@
 
 namespace Ttpryg\InventoryEngine\Repositories;
 
-use DateTimeImmutable;
 use PDO;
 use Ttpryg\InventoryEngine\Contracts\InventoryLocationRepositoryInterface;
 use Ttpryg\InventoryEngine\Entities\InventoryLocation;
+use Ttpryg\InventoryEngine\Support\PdoRow;
 
 class PdoInventoryLocationRepository implements InventoryLocationRepositoryInterface
 {
@@ -74,18 +74,21 @@ class PdoInventoryLocationRepository implements InventoryLocationRepositoryInter
         return $stmt->execute(['id' => $id]);
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function mapToEntity(array $row): InventoryLocation
     {
         return new InventoryLocation(
-            id: (string) $row['id'],
-            locationType: (string) $row['location_type'],
-            locationId: (string) $row['location_id'],
-            name: (string) $row['name'],
-            code: (string) $row['code'],
-            address: $row['address'] ?? null,
-            isActive: (bool) $row['is_active'],
-            createdAt: ! empty($row['created_at']) ? new DateTimeImmutable($row['created_at']) : null,
-            updatedAt: ! empty($row['updated_at']) ? new DateTimeImmutable($row['updated_at']) : null
+            id: PdoRow::string($row, 'id'),
+            locationType: PdoRow::string($row, 'location_type'),
+            locationId: PdoRow::string($row, 'location_id'),
+            name: PdoRow::string($row, 'name'),
+            code: PdoRow::string($row, 'code'),
+            address: PdoRow::nullableString($row, 'address'),
+            isActive: PdoRow::bool($row, 'is_active'),
+            createdAt: PdoRow::dateTime($row, 'created_at'),
+            updatedAt: PdoRow::dateTime($row, 'updated_at')
         );
     }
 }

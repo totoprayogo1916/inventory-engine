@@ -20,12 +20,16 @@ class InventoryStock
         public int $quantityOnHand = 0,
         public int $quantityReserved = 0,
         public int $minStockAlert = 5,
-        public ?DateTimeImmutable $createdAt = null,
-        public ?DateTimeImmutable $updatedAt = null
+        ?DateTimeImmutable $createdAt = null,
+        ?DateTimeImmutable $updatedAt = null
     ) {
         $this->createdAt = $createdAt ?? new DateTimeImmutable;
         $this->updatedAt = $updatedAt ?? new DateTimeImmutable;
     }
+
+    public DateTimeImmutable $createdAt;
+
+    public DateTimeImmutable $updatedAt;
 
     public function getQuantityAvailable(): int
     {

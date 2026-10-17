@@ -17,12 +17,16 @@ class StockReservation
         public readonly int $quantity,
         public ReservationStatus $status,
         public DateTimeImmutable $expiresAt,
-        public ?DateTimeImmutable $createdAt = null,
-        public ?DateTimeImmutable $updatedAt = null
+        ?DateTimeImmutable $createdAt = null,
+        ?DateTimeImmutable $updatedAt = null
     ) {
         $this->createdAt = $createdAt ?? new DateTimeImmutable;
         $this->updatedAt = $updatedAt ?? new DateTimeImmutable;
     }
+
+    public DateTimeImmutable $createdAt;
+
+    public DateTimeImmutable $updatedAt;
 
     public function isExpired(?DateTimeImmutable $now = null): bool
     {

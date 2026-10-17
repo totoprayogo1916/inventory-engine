@@ -18,7 +18,13 @@ interface InventoryStockRepositoryInterface
 
     public function findByLocationAndProductForUpdate(string $locationType, string $locationId, string $productId, ?string $variantId = null): ?InventoryStock;
 
+    /**
+     * @return list<InventoryStock>
+     */
     public function findByProduct(string $productId, ?string $variantId = null): array;
 
+    /**
+     * @return list<InventoryStock>
+     */
     public function findLowStockItems(?string $locationType = null, ?string $locationId = null): array;
 }

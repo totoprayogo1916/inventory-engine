@@ -411,6 +411,12 @@ class InventoryService
         });
     }
 
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $operation
+     * @return T
+     */
     private function transactional(callable $operation): mixed
     {
         if ($this->transactionManager->isInTransaction()) {

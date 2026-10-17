@@ -160,7 +160,7 @@ class PdoInventoryServiceTest extends PdoTestCase
         $stock->quantityReserved = 0;
         $this->stockRepo->save($stock);
 
-        $count = (int) $this->pdo->query("SELECT COUNT(*) FROM inventory_stocks WHERE id = 'stk-upsert'")->fetchColumn();
+        $count = $this->rowCount("SELECT COUNT(*) FROM inventory_stocks WHERE id = 'stk-upsert'");
         $this->assertEquals(1, $count);
 
         $fetched = $this->stockRepo->findById('stk-upsert');

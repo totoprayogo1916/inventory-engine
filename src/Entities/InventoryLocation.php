@@ -16,10 +16,14 @@ class InventoryLocation
         public string $code,
         public ?string $address = null,
         public bool $isActive = true,
-        public ?DateTimeImmutable $createdAt = null,
-        public ?DateTimeImmutable $updatedAt = null
+        ?DateTimeImmutable $createdAt = null,
+        ?DateTimeImmutable $updatedAt = null
     ) {
         $this->createdAt = $createdAt ?? new DateTimeImmutable;
         $this->updatedAt = $updatedAt ?? new DateTimeImmutable;
     }
+
+    public DateTimeImmutable $createdAt;
+
+    public DateTimeImmutable $updatedAt;
 }

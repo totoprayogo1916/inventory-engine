@@ -16,6 +16,7 @@
     },
     "require-dev": {
         "laravel/pint": "^1.20",
+        "phpstan/phpstan": "^2.0",
         "phpunit/phpunit": "^10.0",
         "rector/rector": "^2.6"
     },
@@ -31,6 +32,7 @@
     },
     "scripts": {
         "test": "vendor/bin/phpunit",
+        "analyse": "vendor/bin/phpstan analyse",
         "fix": [
             "vendor/bin/rector process",
             "vendor/bin/pint"
