@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Ttpryg\InventoryEngine\Entities;
 
 use DateTimeImmutable;
+use Ttpryg\InventoryEngine\Exceptions\InsufficientStockException;
+use Ttpryg\InventoryEngine\Exceptions\InvalidQuantityException;
 
 class InventoryStock
 {
@@ -27,7 +29,7 @@ class InventoryStock
 
     public function getQuantityAvailable(): int
     {
-        return max(0, $this->quantityOnHand - $this->quantityReserved);
+        return $this->quantityOnHand - $this->quantityReserved;
     }
 
     public function isLowStock(): bool
@@ -37,26 +39,60 @@ class InventoryStock
 
     public function reserve(int $quantity): void
     {
+        $this->guardPositiveQuantity($quantity);
+
         $this->quantityReserved += $quantity;
         $this->updatedAt = new DateTimeImmutable;
     }
 
     public function commit(int $quantity): void
     {
-        $this->quantityReserved = max(0, $this->quantityReserved - $quantity);
-        $this->quantityOnHand = max(0, $this->quantityOnHand - $quantity);
+        $this->guardReservedQuantity($quantity, 'commit');
+
+        $this->quantityOnHand -= $quantity;
         $this->updatedAt = new DateTimeImmutable;
     }
 
     public function release(int $quantity): void
     {
-        $this->quantityReserved = max(0, $this->quantityReserved - $quantity);
+        $this->guardReservedQuantity($quantity, 'release');
+
         $this->updatedAt = new DateTimeImmutable;
     }
 
     public function adjust(int $delta): void
     {
+        if ($this->quantityOnHand + $delta < 0) {
+            throw new InsufficientStockException(
+                -$delta,
+                $this->quantityOnHand,
+                "Adjustment of {$delta} would make on-hand stock negative (on hand: {$this->quantityOnHand})"
+            );
+        }
+
         $this->quantityOnHand += $delta;
         $this->updatedAt = new DateTimeImmutable;
+    }
+
+    private function guardPositiveQuantity(int $quantity): void
+    {
+        if ($quantity <= 0) {
+            throw new InvalidQuantityException("Quantity must be greater than 0 (got {$quantity})");
+        }
+    }
+
+    private function guardReservedQuantity(int $quantity, string $operation): void
+    {
+        $this->guardPositiveQuantity($quantity);
+
+        if ($quantity > $this->quantityReserved) {
+            throw new InsufficientStockException(
+                $quantity,
+                $this->quantityReserved,
+                "Cannot {$operation} {$quantity}: only {$this->quantityReserved} reserved"
+            );
+        }
+
+        $this->quantityReserved -= $quantity;
     }
 }

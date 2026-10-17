@@ -23,6 +23,7 @@ use Ttpryg\InventoryEngine\Events\StockCommittedEvent;
 use Ttpryg\InventoryEngine\Events\StockExpiredEvent;
 use Ttpryg\InventoryEngine\Events\StockReleasedEvent;
 use Ttpryg\InventoryEngine\Events\StockReservedEvent;
+use Ttpryg\InventoryEngine\Exceptions\InvalidQuantityException;
 use Ttpryg\InventoryEngine\Repositories\NullTransactionManager;
 
 class InventoryService
@@ -118,6 +119,10 @@ class InventoryService
         int $ttlMinutes = 15
     ): StockReservation {
         return $this->transactional(function () use ($reservationId, $locationType, $locationId, $productId, $quantity, $referenceType, $referenceId, $variantId, $ttlMinutes): StockReservation {
+            if ($quantity <= 0) {
+                throw new InvalidQuantityException("Reservation quantity must be greater than 0 (got {$quantity})");
+            }
+
             $stock = $this->stockRepo->findByLocationAndProductForUpdate($locationType, $locationId, $productId, $variantId);
             if (! $stock instanceof InventoryStock) {
                 throw new RuntimeException("Stock record not found for product {$productId} at location {$locationType}:{$locationId}");
