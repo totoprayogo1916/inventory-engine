@@ -5,6 +5,7 @@ namespace Ttpryg\InventoryEngine\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Ttpryg\InventoryEngine\Enums\ReservationStatus;
+use Ttpryg\InventoryEngine\Exceptions\InvalidQuantityException;
 use Ttpryg\InventoryEngine\Repositories\MemoryInventoryLocationRepository;
 use Ttpryg\InventoryEngine\Repositories\MemoryInventoryStockRepository;
 use Ttpryg\InventoryEngine\Repositories\MemoryStockMovementRepository;
@@ -96,6 +97,36 @@ class InventoryServiceTest extends TestCase
         );
 
         $this->assertEquals(70, $sourceStock->quantityOnHand);
+    }
+
+    public function test_reserve_stock_rejects_non_positive_quantity(): void
+    {
+        $this->expectException(InvalidQuantityException::class);
+
+        $this->service->reserveStock(
+            reservationId: 'res-1',
+            locationType: 'warehouse',
+            locationId: 'wh-jkt',
+            productId: 'prod-100',
+            quantity: 0,
+            referenceType: 'order',
+            referenceId: 'order-99'
+        );
+    }
+
+    public function test_reserve_stock_rejects_negative_quantity(): void
+    {
+        $this->expectException(InvalidQuantityException::class);
+
+        $this->service->reserveStock(
+            reservationId: 'res-1',
+            locationType: 'warehouse',
+            locationId: 'wh-jkt',
+            productId: 'prod-100',
+            quantity: -5,
+            referenceType: 'order',
+            referenceId: 'order-99'
+        );
     }
 
     public function test_expire_reservation_releases_reserved_stock(): void
