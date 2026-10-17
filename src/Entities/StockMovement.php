@@ -20,8 +20,10 @@ class StockMovement
         public readonly ?string $referenceId = null,
         public readonly ?string $note = null,
         public readonly ?string $actorId = null,
-        public ?DateTimeImmutable $createdAt = null
+        ?DateTimeImmutable $createdAt = null
     ) {
         $this->createdAt = $createdAt ?? new DateTimeImmutable;
     }
+
+    public DateTimeImmutable $createdAt;
 }

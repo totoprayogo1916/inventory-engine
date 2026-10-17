@@ -12,7 +12,13 @@ interface StockReservationRepositoryInterface
 
     public function findById(string $id): ?StockReservation;
 
+    /**
+     * @return list<StockReservation>
+     */
     public function findByReference(string $referenceType, string $referenceId): array;
 
+    /**
+     * @return list<StockReservation>
+     */
     public function findExpiredActiveReservations(): array;
 }

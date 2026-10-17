@@ -75,7 +75,7 @@ class PdoStockRepositoriesTest extends PdoTestCase
         $fetched->updatedAt = new DateTimeImmutable;
         $this->reservationRepo->save($fetched);
 
-        $count = (int) $this->pdo->query("SELECT COUNT(*) FROM stock_reservations WHERE id = 'res-1'")->fetchColumn();
+        $count = $this->rowCount("SELECT COUNT(*) FROM stock_reservations WHERE id = 'res-1'");
         $this->assertEquals(1, $count);
         $this->assertEquals(ReservationStatus::COMMITTED, $this->reservationRepo->findById('res-1')?->status);
     }

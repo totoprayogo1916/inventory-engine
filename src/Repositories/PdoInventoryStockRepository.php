@@ -2,10 +2,10 @@
 
 namespace Ttpryg\InventoryEngine\Repositories;
 
-use DateTimeImmutable;
 use PDO;
 use Ttpryg\InventoryEngine\Contracts\InventoryStockRepositoryInterface;
 use Ttpryg\InventoryEngine\Entities\InventoryStock;
+use Ttpryg\InventoryEngine\Support\PdoRow;
 
 class PdoInventoryStockRepository implements InventoryStockRepositoryInterface
 {
@@ -148,7 +148,9 @@ class PdoInventoryStockRepository implements InventoryStockRepositoryInterface
 
     private function driverName(): string
     {
-        return (string) $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+        return is_string($driver) ? $driver : '';
     }
 
     private function lockClause(): string
@@ -156,20 +158,23 @@ class PdoInventoryStockRepository implements InventoryStockRepositoryInterface
         return in_array($this->driverName(), ['mysql', 'mariadb'], true) ? ' FOR UPDATE' : '';
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function mapToEntity(array $row): InventoryStock
     {
         return new InventoryStock(
-            id: (string) $row['id'],
-            locationType: (string) $row['location_type'],
-            locationId: (string) $row['location_id'],
-            productId: (string) $row['product_id'],
-            variantId: $row['variant_id'] ?? null,
-            sku: $row['sku'] ?? null,
-            quantityOnHand: (int) $row['quantity_on_hand'],
-            quantityReserved: (int) $row['quantity_reserved'],
-            minStockAlert: (int) ($row['min_stock_alert'] ?? 5),
-            createdAt: ! empty($row['created_at']) ? new DateTimeImmutable($row['created_at']) : null,
-            updatedAt: ! empty($row['updated_at']) ? new DateTimeImmutable($row['updated_at']) : null
+            id: PdoRow::string($row, 'id'),
+            locationType: PdoRow::string($row, 'location_type'),
+            locationId: PdoRow::string($row, 'location_id'),
+            productId: PdoRow::string($row, 'product_id'),
+            variantId: PdoRow::nullableString($row, 'variant_id'),
+            sku: PdoRow::nullableString($row, 'sku'),
+            quantityOnHand: PdoRow::int($row, 'quantity_on_hand'),
+            quantityReserved: PdoRow::int($row, 'quantity_reserved'),
+            minStockAlert: PdoRow::int($row, 'min_stock_alert', 5),
+            createdAt: PdoRow::dateTime($row, 'created_at'),
+            updatedAt: PdoRow::dateTime($row, 'updated_at')
         );
     }
 }

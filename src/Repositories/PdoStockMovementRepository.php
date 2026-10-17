@@ -2,11 +2,11 @@
 
 namespace Ttpryg\InventoryEngine\Repositories;
 
-use DateTimeImmutable;
 use PDO;
 use Ttpryg\InventoryEngine\Contracts\StockMovementRepositoryInterface;
 use Ttpryg\InventoryEngine\Entities\StockMovement;
 use Ttpryg\InventoryEngine\Enums\MovementType;
+use Ttpryg\InventoryEngine\Support\PdoRow;
 
 class PdoStockMovementRepository implements StockMovementRepositoryInterface
 {
@@ -67,20 +67,23 @@ class PdoStockMovementRepository implements StockMovementRepositoryInterface
         return $result;
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function mapToEntity(array $row): StockMovement
     {
         return new StockMovement(
-            id: (string) $row['id'],
-            inventoryStockId: (string) $row['inventory_stock_id'],
-            locationType: (string) $row['location_type'],
-            locationId: (string) $row['location_id'],
-            type: MovementType::from($row['type']),
-            quantity: (int) $row['quantity'],
-            referenceType: $row['reference_type'] ?? null,
-            referenceId: $row['reference_id'] ?? null,
-            note: $row['note'] ?? null,
-            actorId: $row['actor_id'] ?? null,
-            createdAt: ! empty($row['created_at']) ? new DateTimeImmutable($row['created_at']) : null
+            id: PdoRow::string($row, 'id'),
+            inventoryStockId: PdoRow::string($row, 'inventory_stock_id'),
+            locationType: PdoRow::string($row, 'location_type'),
+            locationId: PdoRow::string($row, 'location_id'),
+            type: MovementType::from(PdoRow::string($row, 'type')),
+            quantity: PdoRow::int($row, 'quantity'),
+            referenceType: PdoRow::nullableString($row, 'reference_type'),
+            referenceId: PdoRow::nullableString($row, 'reference_id'),
+            note: PdoRow::nullableString($row, 'note'),
+            actorId: PdoRow::nullableString($row, 'actor_id'),
+            createdAt: PdoRow::dateTime($row, 'created_at')
         );
     }
 }

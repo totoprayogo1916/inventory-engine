@@ -49,9 +49,27 @@ abstract class PdoTestCase extends TestCase
         $schemaFile = $isMysql ? 'schema.mysql.sql' : 'schema.sqlite.sql';
         $schema = file_get_contents(__DIR__.'/../../database/'.$schemaFile);
 
+        if ($schema === false) {
+            self::fail("Cannot read schema file: {$schemaFile}");
+        }
+
         foreach ($this->splitSqlStatements($schema) as $statement) {
             $pdo->exec($statement);
         }
+    }
+
+    protected function rowCount(string $sql): int
+    {
+        $statement = $this->pdo->prepare($sql);
+
+        if ($statement === false) {
+            self::fail("Cannot prepare statement: {$sql}");
+        }
+
+        $statement->execute();
+        $value = $statement->fetchColumn();
+
+        return is_numeric($value) ? (int) $value : 0;
     }
 
     /**

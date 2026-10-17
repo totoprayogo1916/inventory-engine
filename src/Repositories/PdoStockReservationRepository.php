@@ -7,6 +7,7 @@ use PDO;
 use Ttpryg\InventoryEngine\Contracts\StockReservationRepositoryInterface;
 use Ttpryg\InventoryEngine\Entities\StockReservation;
 use Ttpryg\InventoryEngine\Enums\ReservationStatus;
+use Ttpryg\InventoryEngine\Support\PdoRow;
 
 class PdoStockReservationRepository implements StockReservationRepositoryInterface
 {
@@ -79,18 +80,21 @@ class PdoStockReservationRepository implements StockReservationRepositoryInterfa
         return $result;
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
     private function mapToEntity(array $row): StockReservation
     {
         return new StockReservation(
-            id: (string) $row['id'],
-            inventoryStockId: (string) $row['inventory_stock_id'],
-            referenceType: (string) $row['reference_type'],
-            referenceId: (string) $row['reference_id'],
-            quantity: (int) $row['quantity'],
-            status: ReservationStatus::from($row['status']),
-            expiresAt: new DateTimeImmutable($row['expires_at']),
-            createdAt: ! empty($row['created_at']) ? new DateTimeImmutable($row['created_at']) : null,
-            updatedAt: ! empty($row['updated_at']) ? new DateTimeImmutable($row['updated_at']) : null
+            id: PdoRow::string($row, 'id'),
+            inventoryStockId: PdoRow::string($row, 'inventory_stock_id'),
+            referenceType: PdoRow::string($row, 'reference_type'),
+            referenceId: PdoRow::string($row, 'reference_id'),
+            quantity: PdoRow::int($row, 'quantity'),
+            status: ReservationStatus::from(PdoRow::string($row, 'status')),
+            expiresAt: PdoRow::dateTimeNotNull($row, 'expires_at'),
+            createdAt: PdoRow::dateTime($row, 'created_at'),
+            updatedAt: PdoRow::dateTime($row, 'updated_at')
         );
     }
 }
