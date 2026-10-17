@@ -29,6 +29,7 @@ use Ttpryg\InventoryEngine\Exceptions\ReservationNotActiveException;
 use Ttpryg\InventoryEngine\Exceptions\ReservationNotFoundException;
 use Ttpryg\InventoryEngine\Exceptions\StockNotFoundException;
 use Ttpryg\InventoryEngine\Repositories\NullTransactionManager;
+use Ttpryg\InventoryEngine\Support\Uuid;
 
 class InventoryService
 {
@@ -95,7 +96,7 @@ class InventoryService
 
             if ($initialQuantity > 0) {
                 $movement = new StockMovement(
-                    id: 'mov-'.uniqid(),
+                    id: Uuid::uuid4(),
                     inventoryStockId: $stock->id,
                     locationType: $locationType,
                     locationId: $locationId,
@@ -152,7 +153,7 @@ class InventoryService
             $this->reservationRepo->save($reservation);
 
             $movement = new StockMovement(
-                id: 'mov-'.uniqid(),
+                id: Uuid::uuid4(),
                 inventoryStockId: $stock->id,
                 locationType: $locationType,
                 locationId: $locationId,
@@ -198,7 +199,7 @@ class InventoryService
             $this->reservationRepo->save($reservation);
 
             $movement = new StockMovement(
-                id: 'mov-'.uniqid(),
+                id: Uuid::uuid4(),
                 inventoryStockId: $stock->id,
                 locationType: $stock->locationType,
                 locationId: $stock->locationId,
@@ -232,7 +233,7 @@ class InventoryService
                 $this->stockRepo->save($stock);
 
                 $movement = new StockMovement(
-                    id: 'mov-'.uniqid(),
+                    id: Uuid::uuid4(),
                     inventoryStockId: $stock->id,
                     locationType: $stock->locationType,
                     locationId: $stock->locationId,
@@ -271,7 +272,7 @@ class InventoryService
                 $this->stockRepo->save($stock);
 
                 $movement = new StockMovement(
-                    id: 'mov-'.uniqid(),
+                    id: Uuid::uuid4(),
                     inventoryStockId: $stock->id,
                     locationType: $stock->locationType,
                     locationId: $stock->locationId,
@@ -324,7 +325,7 @@ class InventoryService
             $this->stockRepo->save($stock);
 
             $movement = new StockMovement(
-                id: 'mov-'.uniqid(),
+                id: Uuid::uuid4(),
                 inventoryStockId: $stock->id,
                 locationType: $locationType,
                 locationId: $locationId,
@@ -370,7 +371,7 @@ class InventoryService
             $targetStock = $this->stockRepo->findByLocationAndProductForUpdate($toLocationType, $toLocationId, $productId, $variantId);
             if (! $targetStock instanceof InventoryStock) {
                 $targetStock = $this->initializeStock(
-                    id: 'stk-'.uniqid(),
+                    id: Uuid::uuid4(),
                     locationType: $toLocationType,
                     locationId: $toLocationId,
                     productId: $productId,
@@ -387,7 +388,7 @@ class InventoryService
             $this->stockRepo->save($targetStock);
 
             $this->movementRepo->record(new StockMovement(
-                id: 'mov-'.uniqid(),
+                id: Uuid::uuid4(),
                 inventoryStockId: $sourceStock->id,
                 locationType: $fromLocationType,
                 locationId: $fromLocationId,
@@ -398,7 +399,7 @@ class InventoryService
             ));
 
             $this->movementRepo->record(new StockMovement(
-                id: 'mov-'.uniqid(),
+                id: Uuid::uuid4(),
                 inventoryStockId: $targetStock->id,
                 locationType: $toLocationType,
                 locationId: $toLocationId,
