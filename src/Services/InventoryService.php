@@ -3,7 +3,6 @@
 namespace Ttpryg\InventoryEngine\Services;
 
 use DateTimeImmutable;
-use RuntimeException;
 use Throwable;
 use Ttpryg\EventDispatcher\Contracts\EventDispatcherInterface;
 use Ttpryg\InventoryEngine\Contracts\InventoryLocationRepositoryInterface;
@@ -23,7 +22,12 @@ use Ttpryg\InventoryEngine\Events\StockCommittedEvent;
 use Ttpryg\InventoryEngine\Events\StockExpiredEvent;
 use Ttpryg\InventoryEngine\Events\StockReleasedEvent;
 use Ttpryg\InventoryEngine\Events\StockReservedEvent;
+use Ttpryg\InventoryEngine\Exceptions\InsufficientStockException;
 use Ttpryg\InventoryEngine\Exceptions\InvalidQuantityException;
+use Ttpryg\InventoryEngine\Exceptions\ReservationExpiredException;
+use Ttpryg\InventoryEngine\Exceptions\ReservationNotActiveException;
+use Ttpryg\InventoryEngine\Exceptions\ReservationNotFoundException;
+use Ttpryg\InventoryEngine\Exceptions\StockNotFoundException;
 use Ttpryg\InventoryEngine\Repositories\NullTransactionManager;
 
 class InventoryService
@@ -125,11 +129,11 @@ class InventoryService
 
             $stock = $this->stockRepo->findByLocationAndProductForUpdate($locationType, $locationId, $productId, $variantId);
             if (! $stock instanceof InventoryStock) {
-                throw new RuntimeException("Stock record not found for product {$productId} at location {$locationType}:{$locationId}");
+                throw new StockNotFoundException("Stock record not found for product {$productId} at location {$locationType}:{$locationId}");
             }
 
             if ($stock->getQuantityAvailable() < $quantity) {
-                throw new RuntimeException("Insufficient available stock (Requested: {$quantity}, Available: {$stock->getQuantityAvailable()})");
+                throw new InsufficientStockException($quantity, $stock->getQuantityAvailable());
             }
 
             $stock->reserve($quantity);
@@ -170,20 +174,20 @@ class InventoryService
         $this->transactional(function () use ($reservationId, $actorId): void {
             $reservation = $this->reservationRepo->findById($reservationId);
             if (! $reservation instanceof StockReservation) {
-                throw new RuntimeException("Reservation {$reservationId} is not active or not found");
+                throw new ReservationNotFoundException("Reservation {$reservationId} not found");
             }
 
             if ($reservation->status !== ReservationStatus::ACTIVE) {
-                throw new RuntimeException("Reservation {$reservationId} is not active or not found");
+                throw new ReservationNotActiveException("Reservation {$reservationId} is not active (status: {$reservation->status->value})");
             }
 
             if ($reservation->isExpired()) {
-                throw new RuntimeException("Reservation {$reservationId} has expired");
+                throw new ReservationExpiredException("Reservation {$reservationId} has expired");
             }
 
             $stock = $this->stockRepo->findByIdForUpdate($reservation->inventoryStockId);
             if (! $stock instanceof InventoryStock) {
-                throw new RuntimeException('Inventory stock record not found');
+                throw new StockNotFoundException("Inventory stock record {$reservation->inventoryStockId} not found");
             }
 
             $stock->commit($reservation->quantity);
@@ -254,7 +258,7 @@ class InventoryService
         $this->transactional(function () use ($reservationId, $actorId): void {
             $reservation = $this->reservationRepo->findById($reservationId);
             if (! $reservation instanceof StockReservation) {
-                throw new RuntimeException("Reservation {$reservationId} not found");
+                throw new ReservationNotFoundException("Reservation {$reservationId} not found");
             }
 
             if ($reservation->status !== ReservationStatus::ACTIVE) {
@@ -313,7 +317,7 @@ class InventoryService
         return $this->transactional(function () use ($locationType, $locationId, $productId, $quantity, $variantId, $note, $actorId): InventoryStock {
             $stock = $this->stockRepo->findByLocationAndProductForUpdate($locationType, $locationId, $productId, $variantId);
             if (! $stock instanceof InventoryStock) {
-                throw new RuntimeException('Stock record not found for adjustment');
+                throw new StockNotFoundException('Stock record not found for adjustment');
             }
 
             $stock->adjust($quantity);
@@ -354,8 +358,13 @@ class InventoryService
     ): void {
         $this->transactional(function () use ($productId, $fromLocationType, $fromLocationId, $toLocationType, $toLocationId, $quantity, $variantId, $note, $actorId): void {
             $sourceStock = $this->stockRepo->findByLocationAndProductForUpdate($fromLocationType, $fromLocationId, $productId, $variantId);
-            if (! $sourceStock instanceof InventoryStock || $sourceStock->getQuantityAvailable() < $quantity) {
-                throw new RuntimeException('Insufficient available stock at source location to transfer');
+            if (! $sourceStock instanceof InventoryStock) {
+                throw new StockNotFoundException("Stock record not found at source location {$fromLocationType}:{$fromLocationId} for product {$productId}");
+            }
+
+            if ($sourceStock->getQuantityAvailable() < $quantity) {
+                $available = $sourceStock->getQuantityAvailable();
+                throw new InsufficientStockException($quantity, $available, "Insufficient available stock at source location to transfer (Requested: {$quantity}, Available: {$available})");
             }
 
             $targetStock = $this->stockRepo->findByLocationAndProductForUpdate($toLocationType, $toLocationId, $productId, $variantId);

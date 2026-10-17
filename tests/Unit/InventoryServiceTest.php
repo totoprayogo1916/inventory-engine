@@ -3,9 +3,13 @@
 namespace Ttpryg\InventoryEngine\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 use Ttpryg\InventoryEngine\Enums\ReservationStatus;
+use Ttpryg\InventoryEngine\Exceptions\InsufficientStockException;
 use Ttpryg\InventoryEngine\Exceptions\InvalidQuantityException;
+use Ttpryg\InventoryEngine\Exceptions\ReservationExpiredException;
+use Ttpryg\InventoryEngine\Exceptions\ReservationNotActiveException;
+use Ttpryg\InventoryEngine\Exceptions\ReservationNotFoundException;
+use Ttpryg\InventoryEngine\Exceptions\StockNotFoundException;
 use Ttpryg\InventoryEngine\Repositories\MemoryInventoryLocationRepository;
 use Ttpryg\InventoryEngine\Repositories\MemoryInventoryStockRepository;
 use Ttpryg\InventoryEngine\Repositories\MemoryStockMovementRepository;
@@ -187,8 +191,8 @@ class InventoryServiceTest extends TestCase
 
         try {
             $this->service->commitReservation('res-1');
-            $this->fail('Expected RuntimeException for expired reservation');
-        } catch (RuntimeException $exception) {
+            $this->fail('Expected ReservationExpiredException');
+        } catch (ReservationExpiredException $exception) {
             $this->assertStringContainsString('has expired', $exception->getMessage());
         }
 
@@ -250,7 +254,7 @@ class InventoryServiceTest extends TestCase
 
     public function test_expire_nonexistent_reservation_throws(): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(ReservationNotFoundException::class);
 
         $this->service->expireReservation('res-missing');
     }
@@ -281,5 +285,132 @@ class InventoryServiceTest extends TestCase
         $this->assertEquals(ReservationStatus::RELEASED, $reservation->status);
         $this->assertEquals(0, $stock->quantityReserved);
         $this->assertEquals(50, $stock->getQuantityAvailable());
+    }
+
+    public function test_reserve_missing_stock_throws_stock_not_found(): void
+    {
+        $this->expectException(StockNotFoundException::class);
+
+        $this->service->reserveStock(
+            reservationId: 'res-1',
+            locationType: 'warehouse',
+            locationId: 'wh-jkt',
+            productId: 'prod-missing',
+            quantity: 1,
+            referenceType: 'order',
+            referenceId: 'order-99'
+        );
+    }
+
+    public function test_reserve_insufficient_stock_throws_with_payload(): void
+    {
+        $this->service->initializeStock(
+            id: 'stk-1',
+            locationType: 'warehouse',
+            locationId: 'wh-jkt',
+            productId: 'prod-100',
+            initialQuantity: 5
+        );
+
+        try {
+            $this->service->reserveStock(
+                reservationId: 'res-1',
+                locationType: 'warehouse',
+                locationId: 'wh-jkt',
+                productId: 'prod-100',
+                quantity: 10,
+                referenceType: 'order',
+                referenceId: 'order-99'
+            );
+            $this->fail('Expected InsufficientStockException');
+        } catch (InsufficientStockException $exception) {
+            $this->assertEquals(10, $exception->requested);
+            $this->assertEquals(5, $exception->available);
+        }
+    }
+
+    public function test_commit_missing_reservation_throws_not_found(): void
+    {
+        $this->expectException(ReservationNotFoundException::class);
+
+        $this->service->commitReservation('res-missing');
+    }
+
+    public function test_commit_released_reservation_throws_not_active(): void
+    {
+        $this->service->initializeStock(
+            id: 'stk-1',
+            locationType: 'warehouse',
+            locationId: 'wh-jkt',
+            productId: 'prod-100',
+            initialQuantity: 50
+        );
+
+        $this->service->reserveStock(
+            reservationId: 'res-1',
+            locationType: 'warehouse',
+            locationId: 'wh-jkt',
+            productId: 'prod-100',
+            quantity: 10,
+            referenceType: 'order',
+            referenceId: 'order-99'
+        );
+        $this->service->releaseReservation('res-1');
+
+        $this->expectException(ReservationNotActiveException::class);
+        $this->service->commitReservation('res-1');
+    }
+
+    public function test_adjust_missing_stock_throws_stock_not_found(): void
+    {
+        $this->expectException(StockNotFoundException::class);
+
+        $this->service->adjustStock(
+            locationType: 'warehouse',
+            locationId: 'wh-jkt',
+            productId: 'prod-missing',
+            quantity: 5
+        );
+    }
+
+    public function test_transfer_missing_source_stock_throws_stock_not_found(): void
+    {
+        $this->expectException(StockNotFoundException::class);
+
+        $this->service->transferStock(
+            productId: 'prod-missing',
+            fromLocationType: 'warehouse',
+            fromLocationId: 'wh-jkt',
+            toLocationType: 'store',
+            toLocationId: 'store-a',
+            quantity: 10
+        );
+    }
+
+    public function test_transfer_insufficient_source_stock_throws_insufficient(): void
+    {
+        $this->service->initializeStock(
+            id: 'stk-src',
+            locationType: 'warehouse',
+            locationId: 'wh-jkt',
+            productId: 'prod-300',
+            initialQuantity: 5
+        );
+
+        try {
+            $this->service->transferStock(
+                productId: 'prod-300',
+                fromLocationType: 'warehouse',
+                fromLocationId: 'wh-jkt',
+                toLocationType: 'store',
+                toLocationId: 'store-a',
+                quantity: 10
+            );
+            $this->fail('Expected InsufficientStockException');
+        } catch (InsufficientStockException $exception) {
+            $this->assertEquals(10, $exception->requested);
+            $this->assertEquals(5, $exception->available);
+            $this->assertStringContainsString('source location', $exception->getMessage());
+        }
     }
 }
