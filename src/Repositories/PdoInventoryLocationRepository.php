@@ -15,12 +15,7 @@ class PdoInventoryLocationRepository implements InventoryLocationRepositoryInter
     {
         $existing = $this->findById($location->id);
 
-        $sql = $existing instanceof \Ttpryg\InventoryEngine\Entities\InventoryLocation
-            ? 'UPDATE inventory_locations SET location_type = :location_type, location_id = :location_id, name = :name, code = :code, address = :address, is_active = :is_active, updated_at = :updated_at WHERE id = :id'
-            : 'INSERT INTO inventory_locations (id, location_type, location_id, name, code, address, is_active, created_at, updated_at) VALUES (:id, :location_type, :location_id, :name, :code, :address, :is_active, :created_at, :updated_at)';
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
+        $params = [
             'id' => $location->id,
             'location_type' => $location->locationType,
             'location_id' => $location->locationId,
@@ -28,9 +23,18 @@ class PdoInventoryLocationRepository implements InventoryLocationRepositoryInter
             'code' => $location->code,
             'address' => $location->address,
             'is_active' => $location->isActive ? 1 : 0,
-            'created_at' => $location->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $location->updatedAt->format('Y-m-d H:i:s'),
-        ]);
+        ];
+
+        if ($existing instanceof InventoryLocation) {
+            $sql = 'UPDATE inventory_locations SET location_type = :location_type, location_id = :location_id, name = :name, code = :code, address = :address, is_active = :is_active, updated_at = :updated_at WHERE id = :id';
+        } else {
+            $sql = 'INSERT INTO inventory_locations (id, location_type, location_id, name, code, address, is_active, created_at, updated_at) VALUES (:id, :location_type, :location_id, :name, :code, :address, :is_active, :created_at, :updated_at)';
+            $params['created_at'] = $location->createdAt->format('Y-m-d H:i:s');
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
     }
 
     public function findById(string $id): ?InventoryLocation

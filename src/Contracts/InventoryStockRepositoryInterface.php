@@ -12,7 +12,11 @@ interface InventoryStockRepositoryInterface
 
     public function findById(string $id): ?InventoryStock;
 
+    public function findByIdForUpdate(string $id): ?InventoryStock;
+
     public function findByLocationAndProduct(string $locationType, string $locationId, string $productId, ?string $variantId = null): ?InventoryStock;
+
+    public function findByLocationAndProductForUpdate(string $locationType, string $locationId, string $productId, ?string $variantId = null): ?InventoryStock;
 
     public function findByProduct(string $productId, ?string $variantId = null): array;
 
