@@ -1,3 +1,4 @@
+-- SQLite schema for ttpryg/inventory-engine
 CREATE TABLE IF NOT EXISTS inventory_locations (
     id VARCHAR(36) PRIMARY KEY,
     location_type VARCHAR(50) NOT NULL, -- warehouse, store, consignment, supplier
@@ -40,6 +41,9 @@ CREATE TABLE IF NOT EXISTS stock_reservations (
     FOREIGN KEY (inventory_stock_id) REFERENCES inventory_stocks(id) ON DELETE CASCADE
 );
 
+CREATE INDEX IF NOT EXISTS idx_reservation_status_expires ON stock_reservations (status, expires_at);
+CREATE INDEX IF NOT EXISTS idx_reservation_reference ON stock_reservations (reference_type, reference_id);
+
 CREATE TABLE IF NOT EXISTS stock_movements (
     id VARCHAR(36) PRIMARY KEY,
     inventory_stock_id VARCHAR(36) NOT NULL,
@@ -54,3 +58,5 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     created_at DATETIME NOT NULL,
     FOREIGN KEY (inventory_stock_id) REFERENCES inventory_stocks(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_movement_stock_created ON stock_movements (inventory_stock_id, created_at);

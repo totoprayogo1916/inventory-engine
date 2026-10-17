@@ -3,8 +3,6 @@
 namespace Ttpryg\InventoryEngine\Tests\Integration;
 
 use DateTimeImmutable;
-use PDO;
-use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Ttpryg\InventoryEngine\Entities\InventoryStock;
 use Ttpryg\InventoryEngine\Enums\ReservationStatus;
@@ -15,10 +13,8 @@ use Ttpryg\InventoryEngine\Repositories\PdoStockReservationRepository;
 use Ttpryg\InventoryEngine\Repositories\PdoTransactionManager;
 use Ttpryg\InventoryEngine\Services\InventoryService;
 
-class PdoInventoryServiceTest extends TestCase
+class PdoInventoryServiceTest extends PdoTestCase
 {
-    private PDO $pdo;
-
     private InventoryService $service;
 
     private PdoInventoryStockRepository $stockRepo;
@@ -29,11 +25,7 @@ class PdoInventoryServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->pdo = new PDO('sqlite::memory:');
-        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        $schema = file_get_contents(__DIR__.'/../../database/schema.sql');
-        $this->pdo->exec($schema);
+        parent::setUp();
 
         $this->stockRepo = new PdoInventoryStockRepository($this->pdo);
         $this->reservationRepo = new PdoStockReservationRepository($this->pdo);
